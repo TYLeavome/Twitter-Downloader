@@ -1,0 +1,308 @@
+// 获取第num_of_block个框的日期、文本、媒体对象个数和具体内容
+function get_info_from_block(num_of_block = 1) {
+    //如果当前网址已切换到twitter/media，则执行以下代码
+    if (document.URL.indexOf('media') != -1) {
+        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(2) > div > div > section > div > div');
+        var block = timeline.childNodes[num_of_block - 1];
+        var content_region = block.querySelector('div > div > article > div > div > div > div > div > div:nth-child(2)');
+        var date = block.querySelector('time').getAttribute('datetime').slice(0, 10); // '2022-02-07T16:05:34.000Z'
+        var video = content_region.querySelector('video[src*="https://video.twimg.com/');
+        var images = content_region.querySelectorAll('img[src*="https://pbs.twimg.com/media/');
+        var data = [];
+
+        // 确定文件名，分两种情况：
+        // 如果block中不含有replying to ...，则正文在content_region.childNodes[0]
+        if (content_region.childNodes.length == 3) {
+            // 如果有正文，则将正文作为文件名
+            if (content_region.childNodes[0].textContent != '') {
+                var texts = content_region.childNodes[0].querySelectorAll('a, span:not([aria-hidden])');
+            }
+            else {
+                // 如果没有正文，则以date为文件名
+                if (content_region.childNodes[0].textContent == '') {
+                    var texts = null;
+                }
+            }
+        }
+        else {
+            // 如果block中含有replying to ...，则正文在content_region.childNodes[1]
+            if (content_region.childNodes.length == 4) {
+                // 如果有正文，则以正文为文件名
+                if (content_region.childNodes[1].textContent != '') {
+                    var texts = content_region.childNodes[1].querySelectorAll('a, span:not([aria-hidden])');
+                }
+                else {
+                    // 如果没有正文，则以replying to ...为文件名
+                    if (content_region.childNodes[1].textContent == '') {
+                        var texts = content_region.childNodes[0].querySelectorAll('a');
+                    }
+                }
+            }
+        }
+        var text = joint_text(texts, date);
+
+        // 如果是视频，则返回视频src，形如：'blob:https://twitter.com/e7aa642e-5a92-4bca-adde-2ef5aebc2f93'
+        if (video != null && images.length == 0) {
+            // blob视频暂时还没想好怎么进行下载
+            data.push('This is a video, URL: ' + video.src);
+        }
+        else {
+            // 如果是图片，则返回图片src
+            if (video == null && images != null) {
+                for (var i = 0; i < images.length; i++) {
+                    // 正文中的emoji会被识别为image；如果在src中找不到'svname'，则说明不是emoji，可对这些images进行下载
+                    if (images[i].src.indexOf('emoji') == -1) {
+                        // 预处理src（替换为name=orig)
+                        var url = images[i].src.slice(0, images[i].src.indexOf('name=')) + 'name=orig';
+                        data.push(url);
+                    }
+                }
+            }
+        }
+        return {
+            'date': date,
+            'text': text,
+            'data': data
+        }
+    }
+    else {
+        // 如果当前网页是某twitter用户的首页，则切换到其Media页面下
+        if (document.URL.startsWith('https://twitter.com/')) {
+            alert('请切换至Media页面!');
+            window.open(document.URL + '/media', '_self');
+        }
+    }
+}
+
+// 将多段text按照一定格式规范拼接成完整的一段
+function joint_text(texts, date) {
+    var text = '';
+    // 将text长度进行限定，似乎chrome对下载的文件名称长度有限制
+    const filename_max_length = 77;
+    // 如果texts不为空
+    if (texts != null) {
+        // 如果是 replying to ...
+        if (texts.length == 1 && texts[0].textContent[0] == '@') {
+            text = 'Replying to ' + texts[0].textContent;
+        }
+        // 否则则将其拼接成一段
+        else {
+            for (var i = 0; i < texts.length; i++) {
+                // 将所有\n替换成' '，去掉'https://'和':'，'/'替换为'-'，去掉首尾空格
+                text_block = texts[i].textContent.replace(/[\n\r]/g, ' ').replace(RegExp('https://', 'g'), '').replace(RegExp(':', 'g'), '').replace(RegExp('/', 'g'), '-').trim();
+                // 拼接的时候保证text不超过filename_max_length个字符
+                if (text == '' || text.length <= filename_max_length && ((text + text_block).length <= filename_max_length)) {
+                    text = text + ' ' + text_block;
+                }
+            }
+        }
+    }
+    // 去掉首尾空格
+    text = text.trim();
+    // 多个重复空格替换成一个
+    text = text.replace(/\s+/ig, ' ');
+    // text仍然为空，则将date作为文件名
+    if (text == '') {
+        text = date.slice(0, 10);
+    }
+    // 若text长度过长，则最多保留filename_max_length个字符
+    if (text.length > filename_max_length) {
+        text = text.slice(0, filename_max_length);
+    }
+    return text;
+}
+
+var backuplist = [];
+// 删除第num_of_block个block，返回被删除block的内容和高度信息并将其添加到backuplist中；这个函数在个人主页（不是Media页面）也能起作用
+function delete_block(num_of_block = 1) {
+    // 如果num_of_block是正整数，则删除对应的block
+    if (typeof (num_of_block) === 'number' && num_of_block > 0 && Number.isInteger(num_of_block)) {
+        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(2) > div > div > section > div > div');
+        var block = timeline.childNodes[num_of_block - 1];
+        var next_block = timeline.childNodes[num_of_block];
+        var content = block;
+        var height = next_block.getAttribute('style').slice(22, next_block.getAttribute('style').indexOf('px')) - block.getAttribute('style').slice(22, block.getAttribute('style').indexOf('px'));
+        info = {
+            'content': content,
+            'height': height
+        }
+        backuplist.push(info);
+        block.remove();
+        // console.log('delete done.');
+        // console.log(backuplist);
+        // return info;
+        return 'delete done.';
+    }
+    else {
+        // 如果num_of_block是负整数且是-1则恢复最新删除的block
+        if (typeof (num_of_block) === 'number' && num_of_block < 0 && Number.isInteger(num_of_block)) {
+            if (num_of_block == -1) {
+                recover_block()
+            }
+        }
+    }
+}
+
+// 恢复最新删除的一个block
+function recover_block() {
+    // 如果backuplist不为空，则恢复backuplist最后一个元素到timeline中
+    if (backuplist.length != 0) {
+        var recovered_block = backuplist[backuplist.length - 1];
+        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(2) > div > div > section > div > div');
+        for (var i = timeline.childElementCount - 1; i >= 0; i--) {
+            var style = timeline.children[i].getAttribute('style');
+            var legacy_height = Number(style.match(/\d+/)); // legacy_height和new_height都是数字而不是字符串
+            var new_height = (legacy_height + recovered_block.height); // legacy_height和new_height都是数字而不是字符串
+            new_style = style.replace(/\d+/, new_height.toString());
+            timeline.children[i].setAttribute('style', new_style);
+        }
+        timeline.insertBefore(recovered_block.content, timeline.children[0]); //将段落节点添加到box的子节点列表后面
+        backuplist.pop(); // 删除backuplist会最后一个元素
+    }
+    // 否则报错
+    else {
+        console.log('Backuplist中暂无可恢复的block.');
+    }
+}
+
+// 以数字格式获取当前时间
+function get_digital_time() {
+    var date = Date();
+    date = date.slice(date.indexOf('GMT') - 9, date.indexOf('GMT') - 1);
+    var hour = date.slice(0, 2);
+    var min = date.slice(3, 5);
+    var sec = date.slice(6, 8);
+    return (3600 * hour + 60 * min + sec);
+}
+
+// 等待函数
+function sleep(sleep_time = 5) {
+
+    // 先测试x=1000的耗时，保存为internal
+    const x = 1000;
+    var time1 = get_digital_time();
+    var count = 0;
+    for (var i = 0; i < x; i++) {
+        for (var j = 0; j < x; j++) {
+            for (var k = 0; k < x; k++) {
+                count = count + i * j * k;
+            }
+        }
+    }
+    var time2 = get_digital_time();
+    var interval = time2 - time1;
+
+    // 根据以上测试结果，设定合适的timer，使运行时间接近设定的sleep_time
+    count = 0;
+    console.time('等待时间:');
+    var timer = 1000 * Math.pow((sleep_time - interval) / interval, 1 / 3);
+    for (var i = 0; i < timer; i++) {
+        for (var j = 0; j < timer; j++) {
+            for (var k = 0; k < timer; k++) {
+                count = count + i * j * k;
+            }
+        }
+    }
+    console.timeEnd('等待时间:');
+}
+
+// 根据传入的下载地址src和文件名下载单个图片
+function image_download(src, filename) {
+    var req = new XMLHttpRequest();
+    // console.log('正在连接url...');
+    req.open("GET", src, true);
+    // console.log('连接成功');
+    req.responseType = 'blob';
+    req.onload = function (e) {
+        if (navigator.msSaveBlob) {
+            var name = resourceUrl.substr(resourceUrl.lastIndexOf("/") + 1);
+            return navigator.msSaveBlob(req.response, name);
+        } else {
+            var url = window.URL.createObjectURL(req.response);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+    }
+    return req;
+}
+
+// 根据传入的下载地址src和文件名下载单个mp4
+function mp4_download(src, filename) {
+    fetch(src).then(res => res.blob()).then(blob => {
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        const url = window.URL.createObjectURL(blob);
+        a.href = url;
+        a.download = filename;
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+    )
+}
+
+// 处理第num_of_block个block
+function process_block(num_of_block = 1, to_delete = 'remain') {
+    var info = get_info_from_block(num_of_block);
+    var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(2) > div > div > section > div > div');
+    // 如果timeline中至少还有4个block，则进行下载
+    if (timeline.childElementCount > 4) {
+        // console.log('Processing...');
+        // 判断data是否为空
+        if (info.data.length == 0) {
+            console.log('未定义的数据类型');
+        }
+        else {
+            // 判断是否是视频
+            var src = info.data[0].toString();
+            if (src.startsWith('This is a video, URL:')) {
+                var url = src.slice(22, src.length);
+                // 如果是mp4
+                if (url.endsWith('.mp4')) {
+                    console.log('这是一个mp4视频, 地址为: ' + url);
+                    filename = info.text + '.mp4';
+                    mp4_download(url, filename);
+                } else {
+                    // 如果是blob
+                    if (url.startsWith('blob:')) {
+                        console.log('这是一个blob视频, 地址为: ' + url.slice(5, url.length));
+                    }
+                }
+            }// 如果是图片，则下载所有图片
+            else {
+                for (var i = 0; i < info.data.length; i++) {
+                    var url = info.data[i];
+                    // 如果多只有1张图片
+                    if (info.data.length == 1) {
+                        var filename = info.text + '.jpg';
+                        image_download(url, filename).send();
+                    }// 如果是多张图片
+                    else {
+                        var filename = info.text + ' ' + (i + 1) + '.jpg';
+                        image_download(url, filename).send();
+                    }
+                }
+            }
+            // 删除第一个block
+            if (to_delete != 'remain') {
+                delete_block();
+            }
+        }
+    }// 如果timeline中不足4个block，则等待加载
+    else {
+
+    }
+    // console.log('Process done.');
+}
+
+// get_info_from_block();
+process_block();
+// delete_block();
+// recover_block();
+
+/////////////////////////以下是用来自动处理前num_to_download个block的循环/////////////////////////
+// 要下载的框的数量
+// var num_to_download = 10;
