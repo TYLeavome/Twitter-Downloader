@@ -4,37 +4,37 @@ function get_info_from_block(num_of_block = 1) {
     if (document.URL.indexOf('media') != -1) {
         var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div');
         var block = timeline.childNodes[num_of_block - 1];
-        var content_region = block.querySelector('div > div > article > div > div > div > div > div > div:nth-child(2)');
+        var content_region = block.querySelector('div > div > article > div > div > div:nth-child(2) > div:nth-child(2)');
         var date = block.querySelector('time').getAttribute('datetime').slice(0, 10); // '2022-02-07T16:05:34.000Z'
-        var video = content_region.querySelector('video[src*="https://video.twimg.com/');
+        var video = content_region.querySelector('video');
         var images = content_region.querySelectorAll('img[src*="https://pbs.twimg.com/media/');
         var data = [];
 
         // 确定文件名，分两种情况：
-        // 如果block中不含有replying to ...，则正文在content_region.childNodes[0]
-        if (content_region.childNodes.length == 3) {
+        // 如果block中不含有replying to ...，则正文在content_region.childNodes[1]
+        if (content_region.childNodes.length == 4) {
             // 如果有正文，则将正文作为文件名
-            if (content_region.childNodes[0].textContent != '') {
-                var texts = content_region.childNodes[0].querySelectorAll('a, span:not([aria-hidden])');
+            if (content_region.childNodes[1].textContent != '') {
+                var texts = content_region.childNodes[1].querySelectorAll('span');
             }
             else {
                 // 如果没有正文，则以date为文件名
-                if (content_region.childNodes[0].textContent == '') {
+                if (content_region.childNodes[1].textContent == '') {
                     var texts = null;
                 }
             }
         }
         else {
-            // 如果block中含有replying to ...，则正文在content_region.childNodes[1]
-            if (content_region.childNodes.length == 4) {
+            // 如果block中含有replying to ...，则正文在content_region.childNodes[2]或[1]
+            if (content_region.childNodes.length == 5) {
                 // 如果有正文，则以正文为文件名
-                if (content_region.childNodes[1].textContent != '') {
-                    var texts = content_region.childNodes[1].querySelectorAll('a, span:not([aria-hidden])');
+                if (content_region.childNodes[2].textContent != '') {
+                    var texts = content_region.childNodes[2].querySelectorAll('a, span:not([aria-hidden])');
                 }
                 else {
                     // 如果没有正文，则以replying to ...为文件名
-                    if (content_region.childNodes[1].textContent == '') {
-                        var texts = content_region.childNodes[0].querySelectorAll('a');
+                    if (content_region.childNodes[1].textContent != '') {
+                        var texts = content_region.childNodes[1].querySelectorAll('a');
                     }
                 }
             }
@@ -297,7 +297,7 @@ function process_block(num_of_block = 1, to_delete = 'remain') {
     }
     // console.log('Process done.');
 }
-
+// 
 // get_info_from_block();
 // process_block();
 delete_block();
