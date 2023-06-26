@@ -2,7 +2,7 @@
 function get_info_from_block(num_of_block = 1) {
     //如果当前网址已切换到twitter/media，则执行以下代码
     if (document.URL.indexOf('media') != -1) {
-        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div');
+        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div > div > div');
         var block = timeline.childNodes[num_of_block - 1];
         var content_region = block.querySelector('div > div > article > div > div > div:nth-child(2) > div:nth-child(2)');
         var date = block.querySelector('time').getAttribute('datetime').slice(0, 10); // '2022-02-07T16:05:34.000Z'
@@ -117,7 +117,7 @@ var backuplist = [];
 function delete_block(num_of_block = 1) {
     // 如果num_of_block是正整数，则删除对应的block
     if (typeof (num_of_block) === 'number' && num_of_block > 0 && Number.isInteger(num_of_block)) {
-        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div');
+        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div > div > div');
         var block = timeline.childNodes[num_of_block - 1];
         var next_block = timeline.childNodes[num_of_block];
         var content = block;
@@ -148,7 +148,7 @@ function recover_block() {
     // 如果backuplist不为空，则恢复backuplist最后一个元素到timeline中
     if (backuplist.length != 0) {
         var recovered_block = backuplist[backuplist.length - 1];
-        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div');
+        var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div > div > div');
         for (var i = timeline.childElementCount - 1; i >= 0; i--) {
             var style = timeline.children[i].getAttribute('style');
             var legacy_height = Number(style.match(/\d+/)); // legacy_height和new_height都是数字而不是字符串
@@ -247,7 +247,7 @@ function mp4_download(src, filename) {
 // 处理第num_of_block个block
 function process_block(num_of_block = 1, to_delete = 'remain') {
     var info = get_info_from_block(num_of_block);
-    var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div');
+    var timeline = $('#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div > div > div');
     // 如果timeline中至少还有4个block，则进行下载
     if (timeline.childElementCount > 4) {
         // console.log('Processing...');
@@ -297,7 +297,7 @@ function process_block(num_of_block = 1, to_delete = 'remain') {
     }
     // console.log('Process done.');
 }
-// 
+
 // get_info_from_block();
 // process_block();
 delete_block();
