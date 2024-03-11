@@ -236,9 +236,9 @@ function auto_process() {
 }
 
 function auto_download(css) {
-    img = document.querySelector("css")
+    // img = document.querySelector(css);
     // img.click()
-    auto_process()
+    auto_process();
 }
 
 document.addEventListener('dblclick', function (event) {
