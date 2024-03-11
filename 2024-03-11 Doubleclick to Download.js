@@ -27,6 +27,7 @@ function download_img(src, filename) {
     return req.send();
 }
 
+// 生成CSS选择器
 function getCssSelector(element) {
     var paths = [];
     while (element) {
@@ -56,26 +57,6 @@ function get_click_node(css) {
     // 检查节点是否可点击（这里的判断可以根据实际情况调整）
     function isClickable(node) {
         return node.tagName === 'A' || node.tagName === 'BUTTON' || node.hasAttribute('onclick') || typeof node.onclick === 'function';
-    }
-
-    // 生成CSS选择器
-    function getCssSelector(element) {
-        var paths = [];
-        while (element) {
-            var tagName = element.nodeName.toLowerCase();
-            if (element.id) {
-                paths.unshift(tagName + '#' + element.id);
-                break;
-            } else {
-                var sib = element, nth = 1;
-                while (sib = sib.previousElementSibling) {
-                    nth++;
-                }
-                paths.unshift(tagName + ":nth-child(" + nth + ")");
-            }
-            element = element.parentElement;
-        }
-        return paths.join(" > ");
     }
 
     // 向上回溯查找可点击的节点
