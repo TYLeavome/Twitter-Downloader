@@ -108,7 +108,6 @@ function mp4_download(src, filename) {
 }
 
 function download_imgs(images, date, content) {
-
     // 替换src中的格式参数，获取原图链接
     const srcOriginal = images[0].replace(/format=jpg&name=\w+/, 'format=jpg&name=orig');
     // 格式化日期时间字符串
