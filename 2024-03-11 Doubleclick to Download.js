@@ -1,8 +1,8 @@
-const image_area = document.querySelector("#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div");
-const first_line = image_area.querySelector('div:nth-child(3)');
-const image1 = first_line.querySelector('div > div > div > div > li:nth-child(1) > div > div > div > a');
-const image2 = first_line.querySelector('div > div > div > div > li:nth-child(2) > div > div > div > a');
-const image3 = first_line.querySelector('div > div > div > div > li:nth-child(3) > div > div > div > a');
+// const image_area = document.querySelector("#react-root > div > div > div > main > div > div > div > div > div > div:nth-child(3) > div > div > section > div > div");
+// const first_line = image_area.querySelector('div:nth-child(3)');
+// const image1 = first_line.querySelector('div > div > div > div > li:nth-child(1) > div > div > div > a');
+// const image2 = first_line.querySelector('div > div > div > div > li:nth-child(2) > div > div > div > a');
+// const image3 = first_line.querySelector('div > div > div > div > li:nth-child(3) > div > div > div > a');
 const wait_time = 500;
 
 // 根据传入的下载地址src和需要保存的filename下载单个图片
@@ -91,10 +91,58 @@ function get_click_node(css) {
     }
 }
 
+// 根据传入的下载地址src和文件名下载单个mp4
+function mp4_download(src, filename) {
+    fetch(src).then(res => res.blob()).then(blob => {
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        const url = window.URL.createObjectURL(blob);
+        a.href = url;
+        a.download = filename;
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+    )
+}
+
+function download_imgs(images, date, content) {
+
+    // 替换src中的格式参数，获取原图链接
+    const srcOriginal = images[0].replace(/format=jpg&name=\w+/, 'format=jpg&name=orig');
+    // 格式化日期时间字符串
+    const dateTimeFormatted = date.replace('T', ' ').replace(/:/g, '').replace(/\.\d+Z$/, '');
+    max_str = 60;
+    if (content.length > max_str) {
+        content = content.substring(0, max_str);
+    }
+    if (images.length == 1) {
+        if (content == '') {
+            filename = `${dateTimeFormatted}.jpeg`;
+        } else {
+            filename = `${dateTimeFormatted} ${content}.jpeg`;
+        }
+        // 调用download_img函数下载图片
+        download_img(srcOriginal, filename);
+    } else {
+        images.forEach((src, index) => {
+            if (content == '') {
+                filename = `${dateTimeFormatted} ${index + 1}.jpeg`;
+            } else {
+                filename = `${dateTimeFormatted} ${content} ${index + 1}.jpeg`;
+            }
+            // 调用download_img函数下载图片
+            download_img(srcOriginal, filename);
+        });
+    }
+}
+
 function auto_process() {
     setTimeout(() => {
         // 2. 模拟点击右上角按钮展开新的评论区域的效果，然后等待2秒
         const expandCommentsBtn = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div:nth-child(3) > div');
+        const closeBtn = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div:nth-child(2)');
         expandCommentsBtn.click();
         setTimeout(() => {
             // 3. 在content_block内读取评论内容并输出
@@ -109,51 +157,111 @@ function auto_process() {
                 // 5. 再次点击expandCommentsBtn，关闭展开的评论区域
                 expandCommentsBtn.click();
                 setTimeout(() => {
-                    // 6. 获取所有图片链接并输出
-                    document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > img')
-                    const ul_node = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > ul');
-                    let images = [];
-                    if (ul_node) {
-                        const li_nodes = ul_node.querySelectorAll('li');
-                        images = Array.from(li_nodes).map(li => li.querySelector('img').src);
+                    // 初始化images数组用于存储图片链接
+                    const images = [];
+                    // 尝试获取单个图片
+                    const single_image_node = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > img');
+                    if (single_image_node) {
+                        // 如果存在单个图片，获取图片链接并添加到images数组
+                        images.push(single_image_node.src);
+                        console.log(images);
+                        closeBtn.click();
+                        download_imgs(images, date, content);
                     } else {
-                        const single_image_node = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > img');
-                        if (single_image_node) {
-                            images.push(single_image_node.src);
+                        // 尝试获取包含多个图片的ul节点
+                        const ul_node = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > ul');
+                        if (ul_node && ul_node.querySelectorAll('li').length > 0) {
+                            // 获取第一个li节点内的图片链接并添加到images数组
+                            images.push(ul_node.querySelector('li img').src);
+                            // 定位向右滚动按钮
+                            const toRightBtn = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div');
+                            if (toRightBtn) {
+                                const li_nodes = ul_node.querySelectorAll('li');
+                                num_img = li_nodes.length;
+                                switch (num_img) {
+                                    case 2:
+                                        setTimeout(() => {
+                                            toRightBtn.click(); // 点击向右按钮
+                                            imgSrc = li_nodes[1].querySelector('img').src;
+                                            images.push(imgSrc);
+                                            console.log(images);
+                                            setTimeout(() => {
+                                                closeBtn.click();
+                                                download_imgs(images, date, content);
+                                            }, wait_time);
+                                        }, wait_time);
+                                        break
+                                    case 3:
+                                        setTimeout(() => {
+                                            toRightBtn.click(); // 点击向右按钮
+                                            imgSrc = li_nodes[1].querySelector('img').src;
+                                            images.push(imgSrc);
+                                            setTimeout(() => {
+                                                toRightBtn.click(); // 点击向右按钮
+                                                imgSrc = li_nodes[2].querySelector('img').src;
+                                                images.push(imgSrc);
+                                                console.log(images);
+                                                setTimeout(() => {
+                                                    closeBtn.click();
+                                                    download_imgs(images, date, content);
+                                                }, wait_time);
+                                            }, wait_time);
+                                        }, wait_time);
+                                        break
+                                    case 4:
+                                        setTimeout(() => {
+                                            toRightBtn.click(); // 点击向右按钮
+                                            imgSrc = li_nodes[1].querySelector('img').src;
+                                            images.push(imgSrc);
+                                            setTimeout(() => {
+                                                toRightBtn.click(); // 点击向右按钮
+                                                imgSrc = li_nodes[2].querySelector('img').src;
+                                                images.push(imgSrc);
+                                                setTimeout(() => {
+                                                    toRightBtn.click(); // 点击向右按钮
+                                                    imgSrc = li_nodes[3].querySelector('img').src;
+                                                    images.push(imgSrc);
+                                                    console.log(images);
+                                                    setTimeout(() => {
+                                                        closeBtn.click();
+                                                        download_imgs(images, date, content);
+                                                    }, wait_time);
+                                                }, wait_time);
+                                            }, wait_time);
+                                        }, wait_time);
+                                        break
+                                }
+                            }
+                        } else {
+                            setTimeout(() => {
+                                // 尝试获取视频节点
+                                const video = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div > div:nth-child(1) > div > video');
+                                if (video) {
+                                    // 如果视频存在，获取视频的src地址
+                                    const videoSrc = video.querySelector('source').src;
+                                    console.log(videoSrc);
+                                    // mp4_download(videoSrc, 'video_filename.mp4');
+                                }
+                                setTimeout(() => {
+                                    const closeBtn = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div:nth-child(2)');
+                                    closeBtn.click();
+                                }, wait_time);
+                            }, wait_time);
                         }
                     }
-                    console.log(images);
-
-                    // 下一步是图片下载，这部分通常在服务器端处理
-                    // 假设我们已经有了 images 数组、content 和 date 变量
-                    images.forEach((src, index) => {
-                        // 替换src中的格式参数，获取原图链接
-                        const srcOriginal = src.replace(/format=jpg&name=\w+/, 'format=jpg&name=orig');
-                        // 格式化日期时间字符串
-                        const dateTimeFormatted = date.replace('T', ' ').replace(/:/g, '').replace(/\.\d+Z$/, '');
-                        // 生成文件名，这里用‘text’作为示例，你可以替换为实际的内容文本
-                        const filename = `${dateTimeFormatted} ${content} ${index + 1}.jpeg`;
-                        // 调用download_img函数下载图片
-                        download_img(srcOriginal, filename);
-                    });
-                    setTimeout(() => {
-                        // 8. 模拟自动点击左上角“X”回到原来页面的效果
-                        const closeBtn = document.querySelector('#react-root > div > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div > div:nth-child(2)');
-                        closeBtn.click();
-                    }, wait_time);
                 }, wait_time);
             }, wait_time);
         }, wait_time);
     }, wait_time);
 }
 
-function auto_download(css){
+function auto_download(css) {
     img = document.querySelector("css")
     // img.click()
     auto_process()
 }
 
-document.addEventListener('dblclick', function(event) {
+document.addEventListener('dblclick', function (event) {
     // 确保是鼠标左键双击
     if (event.button === 0) {
         // 获取双击的元素
